@@ -9,3 +9,5 @@ mGBA's bundled libraries do: `third_party/mgba`, `third_party/rcheevos`). `app/b
   (SHADERS > SMOOTHING; xBRZ's own part is GPL 3.0, like the app).
 - `PokeAPI-BSD-3-Clause.txt`: PokeAPI's data (the National Dex species list).
 - `XZ-Java-0BSD.txt`: XZ for Java (.7z archives).
+- `damage-calc-MIT.txt`: the Pokemon Showdown damage calculator (smogon/damage-calc), whose mechanics the CALC
+  tab's engine ports and whose Radical Red fork (kvarflow/rr-calc) the CALC pack's tables come from.
