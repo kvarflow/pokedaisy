@@ -48,7 +48,8 @@ object CalcLive {
 
     /** The move names of [mon], Hidden Power with the type its IVs give ([ivs] in the game's stat order: each one's lowest bit). */
     private fun moves(pack: CalcPack, mon: MonView, ivs: List<Int>?): List<String> = mon.moves.mapNotNull { mv ->
-        val name = pack.moveName(mv.id) ?: return@mapNotNull null
+        // By the ROM's id; a view without one (a preview's) by its name.
+        val name = pack.moveName(mv.id) ?: pack.moveNamed(mv.name) ?: return@mapNotNull null
         if (name != "Hidden Power" || ivs == null || ivs.size < 6) return@mapNotNull name
         val bits = (0 until 6).sumOf { (ivs[it] and 1) shl it }
         "Hidden Power ${HIDDEN_POWER[bits * 15 / 63]}".takeIf { it in pack.moves } ?: name

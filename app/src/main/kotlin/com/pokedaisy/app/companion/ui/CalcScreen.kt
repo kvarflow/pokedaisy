@@ -47,6 +47,7 @@ import com.pokedaisy.app.companion.data.MonView
 import com.pokedaisy.app.companion.data.SnapshotView
 import com.pokedaisy.app.companion.data.spriteAsset
 import com.pokedaisy.app.companion.ui.theme.AppColors
+import com.pokedaisy.app.companion.ui.theme.gbaFocusRing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -185,10 +186,7 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
             wild -> "WILD"
             else -> "CALC"
         }
-        val trailing = fight?.let { f ->
-            listOfNotNull(f.location.takeIf { it.isNotEmpty() }, if (f.levelCap > 0) "CAP Lv${f.levelCap}" else null).joinToString(" · ")
-        }
-        OptionTitleWindow(title, m, trailing = trailing) {
+        OptionTitleWindow(title, m) {
             if (pack.modes.size > 1) {
                 OptionButton(modeId.uppercase(), small, onClick = {
                     val ids = pack.modes.keys.toList()
@@ -223,6 +221,8 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             status?.let { GbaText(it, OptionColors.value, OptionColors.valueShadow, small) }
+                            val where = listOfNotNull(fight.location.takeIf { it.isNotEmpty() }, if (fight.levelCap > 0) "LEVEL CAP ${fight.levelCap}" else null)
+                            if (where.isNotEmpty()) GbaText(where.joinToString(" · "), OptionColors.muted, OptionColors.mutedShadow, small)
                             if (fight.variants.size > 1 && !fighting) {
                                 OptionButton(variant.label.ifEmpty { "TEAM" }.uppercase(), small, onClick = {
                                     ui.variants = ui.variants + (fight.index to (fight.variants.indexOf(variant) + 1) % fight.variants.size)
@@ -323,7 +323,6 @@ private fun CalcSide(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u * 2)) {
                     mon.types.forEach { TypePill(it, small) }
-                    GbaText("HP ${mon.curHP()}/${mon.maxHP()}", OptionColors.muted, OptionColors.mutedShadow, small)
                     if (mon.status.isNotEmpty()) GbaText(mon.status.uppercase(), OptionColors.value, OptionColors.valueShadow, small)
                 }
             }
@@ -341,42 +340,42 @@ private fun CalcSide(
                 false -> VerdictPill("SECOND", KoGrey)
                 null -> VerdictPill("TIE", KoGrey)
             }
+            Spacer(Modifier.weight(1f))
+            GbaText("HP ${mon.curHP()}/${mon.maxHP()}", OptionColors.muted, OptionColors.mutedShadow, small)
         }
         Spacer(Modifier.height(u * 2))
-        lines.forEach { line ->
-            Separator(m, Modifier.fillMaxWidth().padding(vertical = u * 2))
-            MoveLine(line, threat, m, small)
-        }
+        Separator(m, Modifier.fillMaxWidth().padding(vertical = u * 2))
+        lines.forEach { line -> MoveLine(line, threat, m, small) }
         if (lines.isEmpty()) GbaText("MOVES NOT KNOWN", OptionColors.muted, OptionColors.mutedShadow, small)
     }
 }
 
-/** A move: its name and type, then the share of the target's HP it takes and the hits to a knock-out. */
+/** A move on one row: its type's colour down the left, its name, the share of the target's HP it takes, the hits to a knockout. */
 @Composable
 private fun MoveLine(line: CalcLine, threat: Boolean, m: GbaTextMetrics, small: GbaTextMetrics) {
     val u = m.u
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GbaText(line.move, OptionColors.label, OptionColors.labelShadow, m, Modifier.weight(1f))
-            if (line.priority > 0) {
-                Spacer(Modifier.width(u * 2))
-                VerdictPill("+${line.priority}", KoGrey)
-            }
+    Row(Modifier.fillMaxWidth().padding(vertical = u * 1), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(u * 3).height(small.lineHeight).background(AppColors.typeColors[line.type] ?: AppColors.muted))
+        Spacer(Modifier.width(u * 3))
+        GbaText(line.move, OptionColors.label, OptionColors.labelShadow, small, Modifier.weight(1f))
+        if (line.priority > 0) {
+            VerdictPill("+${line.priority}", KoGrey)
+            Spacer(Modifier.width(u * 2))
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TypePill(line.type, small)
-            Spacer(Modifier.width(u * 3))
-            if (!line.damages) {
-                GbaText(if (line.category == "Status") "STATUS" else "NO EFFECT", OptionColors.muted, OptionColors.mutedShadow, small, Modifier.weight(1f))
-            } else {
-                GbaText("${percent(line.minPermille)} - ${percent(line.maxPermille)}%", OptionColors.value, OptionColors.valueShadow, small, Modifier.weight(1f))
-                koLabel(line)?.let { (text, tier) ->
-                    VerdictPill(text, when (tier) {
-                        0 -> if (threat) KoRed else KoGreen
-                        1 -> if (threat) KoOrange else KoLime
-                        else -> KoGrey
-                    })
-                }
+        if (!line.damages) {
+            GbaText(if (line.category == "Status") "STATUS" else "NO EFFECT", OptionColors.muted, OptionColors.mutedShadow, small)
+        } else {
+            // Tenths matter near a knockout's thresholds; past 100% whole numbers leave the move's name room.
+            val range = if (line.maxPermille >= 1000) "${line.minPermille / 10}-${line.maxPermille / 10}%"
+                else "${percent(line.minPermille)}-${percent(line.maxPermille)}%"
+            GbaText(range, OptionColors.value, OptionColors.valueShadow, small)
+            koLabel(line)?.let { (text, tier) ->
+                Spacer(Modifier.width(u * 2))
+                VerdictPill(text, when (tier) {
+                    0 -> if (threat) KoRed else KoGreen
+                    1 -> if (threat) KoOrange else KoLime
+                    else -> KoGrey
+                })
             }
         }
     }
@@ -404,12 +403,13 @@ private fun TypePill(type: String, small: GbaTextMetrics) {
     ) { GbaText(type.uppercase(), Color.White, Color(0x66000000), small) }
 }
 
-/** A party Pokémon under the matchup: its best hit on the foe picked (green) over the worst it takes (red). */
+/** A party Pokémon under the matchup: its icon over its best hit on the foe picked (green) and the worst it takes (red). */
 @Composable
 private fun PartyPick(mv: MonView, matchup: CalcMatchup?, picked: Boolean, small: GbaTextMetrics, modifier: Modifier, onClick: () -> Unit) {
     val u = small.u
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
+    val tiny = rememberGbaTextMetrics(1f, wholePixels = false)
     Row(
         modifier
             .gbaFocusRing(focused, PixelRoundedShape(u * 3))
@@ -420,16 +420,13 @@ private fun PartyPick(mv: MonView, matchup: CalcMatchup?, picked: Boolean, small
             }
             .soundClickable(interactionSource = source, indication = null, onClick = onClick)
             .semantics { contentDescription = mv.shownName }
-            .padding(horizontal = u * 3, vertical = u * 2),
+            .padding(horizontal = u * 2, vertical = u * 1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SpeciesIcon(mv.iconAsset, size = small.lineHeight * 1.8f, modifier = Modifier.alpha(if (mv.hp == 0 && !mv.isEgg) 0.35f else 1f))
-        Spacer(Modifier.width(u * 2))
-        Column {
-            val best = matchup?.best
-            val threat = matchup?.threat
-            GbaText(best?.let { "${it.maxPermille / 10}%" } ?: "-", KoGreen, Color(0x33000000), small)
-            GbaText(threat?.let { "${it.maxPermille / 10}%" } ?: "-", KoRed, Color(0x33000000), small)
+        SpeciesIcon(mv.iconAsset, size = small.lineHeight * 1.4f, modifier = Modifier.alpha(if (mv.hp == 0 && !mv.isEgg) 0.35f else 1f))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+            GbaText(matchup?.best?.let { "${it.maxPermille / 10}%" } ?: "-", KoGreen, Color(0x33000000), tiny)
+            GbaText(matchup?.threat?.let { "${it.maxPermille / 10}%" } ?: "-", KoRed, Color(0x33000000), tiny)
         }
     }
 }

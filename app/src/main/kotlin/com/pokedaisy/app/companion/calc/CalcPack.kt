@@ -165,6 +165,13 @@ class CalcPack(
     /** The ROM's id for the species [name] (its icon); 0 = none. */
     fun speciesId(name: String): Int = speciesIdByName[name] ?: 0
     fun moveName(romId: Int): String? = moveIds[romId]
+
+    private val movesLoose: Map<String, String> by lazy { moves.keys.associateBy(::loose) }
+
+    /** The move a game spells [name] (any case, spaces or dashes), as the pack names it; null = none. */
+    fun moveNamed(name: String): String? = if (name in moves) name else movesLoose[loose(name)]
+
+    private fun loose(s: String) = s.filter { it.isLetterOrDigit() }.lowercase()
     fun itemName(romId: Int): String? = itemIds[romId]
 
     /** The abilities the ROM's species [romId] can have: slot 1, slot 2, hidden. */
