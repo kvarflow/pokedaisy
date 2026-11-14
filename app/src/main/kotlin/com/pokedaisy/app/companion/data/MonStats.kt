@@ -17,6 +17,8 @@ data class MonStats(
      * from [MONOMYTH_NATURE_BASE] on. */
     val nature: Int,
     val stats: List<Int>,
+    /** The hidden-ability flag (the IV word's top bit, CFRU's and the newer engines'): its species' third ability. */
+    val hiddenAbility: Boolean = false,
 )
 
 const val STAT_HP = 0

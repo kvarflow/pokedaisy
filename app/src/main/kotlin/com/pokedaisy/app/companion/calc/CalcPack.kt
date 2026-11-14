@@ -158,7 +158,12 @@ class CalcPack(
         return chart[a][d]
     }
 
+    private val speciesIdByName: Map<String, Int> = HashMap<String, Int>().apply { for ((id, n) in speciesIds) putIfAbsent(n, id) }
+
     fun speciesName(romId: Int): String? = speciesIds[romId]
+
+    /** The ROM's id for the species [name] (its icon); 0 = none. */
+    fun speciesId(name: String): Int = speciesIdByName[name] ?: 0
     fun moveName(romId: Int): String? = moveIds[romId]
     fun itemName(romId: Int): String? = itemIds[romId]
 
@@ -299,4 +304,16 @@ class CalcPack(
             )
         }
     }
+}
+
+/** The packs read so far, one a game: read once (off the UI thread) and kept. */
+object CalcPacks {
+    private val loaded = java.util.concurrent.ConcurrentHashMap<String, CalcPack>()
+
+    fun cached(game: String): CalcPack? = loaded[game]
+
+    /** [game]'s pack through [open], which opens an asset by its path; null = none, or one that won't read. */
+    fun load(game: String, open: (String) -> InputStream): CalcPack? = loaded[game] ?: runCatching {
+        open("calc/$game.pack.gz").use { CalcPack.read(it) }
+    }.getOrNull()?.also { loaded[game] = it }
 }

@@ -127,6 +127,8 @@ data class Telemetry(
     val battleFoes: List<Mon> = emptyList(),
     /** gBattleTypeFlags' TRAINER bit: a trainer battle, not a wild one; null = not read (the NUZLOCKE tracker skips it). */
     val isTrainerBattle: Boolean? = null,
+    /** The trainer being fought ([NativeConfig.trainerBattleOpponent]); 0 = none, a wild battle or not read. */
+    val trainerId: Int = 0,
     /** [enemyParty] index of the foe that's out, and of monToSwitchIntoId (its trainer's last pick); -1 = unknown. */
     val enemyActive: Int = -1,
     val enemyNext: Int = -1,

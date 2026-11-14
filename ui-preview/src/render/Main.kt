@@ -1825,6 +1825,17 @@ fun main(args: Array<String>) {
         Shot("$g-more", bw, bh, bd, companion("MORE")),
         // NUZLOCKE is under MORE in every game the tracker follows; off, the tab says so and offers TURN ON.
         Shot("$g-nuzlocke-off", bw, bh, bd, companion("NUZLOCKE")),
+        // CALC (Radical Red): the next fight from the save, a fight stepped to by hand, and one being fought (Brock's id).
+        *(if (game == GameKind.RADICAL_RED) arrayOf(
+            Shot("$g-calc", bw, bh, bd, companion("CALC") { snapshot().copy(game = GameKind.RADICAL_RED) }),
+            Shot("$g-calc-next", bw, bh, bd, companion("CALC") { snapshot().copy(game = GameKind.RADICAL_RED) }) {
+                repeat(5) { onNodeWithText("NEXT").performClick(); mainClock.advanceTimeByFrame() }
+                repeat(3) { mainClock.advanceTimeByFrame() }
+            },
+            Shot("$g-calc-battle", bw, bh, bd, companion("CALC") {
+                snapshot().copy(game = GameKind.RADICAL_RED, inBattle = true, isTrainerBattle = true, trainerId = 414)
+            }),
+        ) else emptyArray()),
         Shot("$g-more-full", bw, bh, bd, companion("MORE", barTabs = listOf("PARTY", "MAP"))),
         // Every app icon at once (a game can't have all of them off the bar with a ROM-less preview).
         Shot("$g-more-icons", bw, bh, bd, {

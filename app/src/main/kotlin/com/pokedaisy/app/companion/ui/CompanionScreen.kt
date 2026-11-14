@@ -286,6 +286,8 @@ fun CompanionScreen(
                 "ACHIEVEMENTS" -> achievements != null
                 // Always there for a game the tracker follows (under MORE); while it's off the tab says so and turns it on.
                 "NUZLOCKE" -> com.pokedaisy.app.companion.Nuzlocke.supports(game)
+                // A game with a damage calculator pack (calcPackGame).
+                "CALC" -> calcPackGame(game) != null
                 else -> true
             }
         }
@@ -733,6 +735,8 @@ fun CompanionScreen(
                                 onConfigure = { settingsUi.page = Page.TABS; openTab("SETTINGS") },
                                 usable = { !snapshot.unsupported || snapshot.blocked != null || it == "ACHIEVEMENTS" },
                             )
+                        } else if (tab == "CALC") {
+                            CalcScreen(snapshot)
                         } else if (tab == "NUZLOCKE") {
                             NuzlockeScreen(snapshot.regionMapSectionId, snapshot.location.mapSecName)
                         } else if (tab == "ACHIEVEMENTS") {
@@ -967,6 +971,7 @@ internal fun companionTabLabel(id: String): String = when (id) {
     "MAP" -> tr("MAP")
     "GUIDE" -> tr("GUIDE")
     "NUZLOCKE" -> tr("NUZLOCKE")
+    "CALC" -> "CALC"
     "CARD" -> tr("CARD")
     "BOXES" -> tr("BOXES")
     "STATES" -> tr("STATES")
