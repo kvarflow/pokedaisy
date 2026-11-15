@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -33,6 +34,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import com.pokedaisy.app.companion.calc.AiPrediction
+import com.pokedaisy.app.companion.calc.AiSide
+import com.pokedaisy.app.companion.calc.CalcAi
 import com.pokedaisy.app.companion.calc.CalcFight
 import com.pokedaisy.app.companion.calc.CalcLine
 import com.pokedaisy.app.companion.calc.CalcLive
@@ -41,7 +45,9 @@ import com.pokedaisy.app.companion.calc.CalcMode
 import com.pokedaisy.app.companion.calc.CalcMon
 import com.pokedaisy.app.companion.calc.CalcPack
 import com.pokedaisy.app.companion.calc.CalcPacks
+import com.pokedaisy.app.companion.calc.CalcSet
 import com.pokedaisy.app.companion.calc.CalcVariant
+import com.pokedaisy.app.companion.calc.CfruAi
 import com.pokedaisy.app.companion.data.GameKind
 import com.pokedaisy.app.companion.data.MonView
 import com.pokedaisy.app.companion.data.SnapshotView
@@ -71,6 +77,24 @@ private val KoLime = Color(0xFF78A028)
 private val KoRed = Color(0xFFD04030)
 private val KoOrange = Color(0xFFD87820)
 private val KoGrey = Color(0xFF787880)
+/** The trainer AI's likeliest move. */
+private val AiBlue = Color(0xFF3152CD)
+
+/** One of the trainer's Pokémon on the tab: [set] the pack's (null = a wild one, or one the pack doesn't list). */
+private class FoeMon(val mon: CalcMon, val speciesId: Int, val set: CalcSet?, val fainted: Boolean = false)
+
+/** What the trainer's AI does this turn ([prediction]) and who it sends out if its Pokémon is knocked out now ([next]). */
+private class CalcOdds(val prediction: AiPrediction, val next: List<Pair<AiSide, Double>>, val reason: (Int) -> String?)
+
+/** A chance as the original shows it: "<1%", "62%", "100%". */
+private fun share(p: Double): String = when {
+    p <= 0 -> "0%"
+    p >= 0.995 -> "100%"
+    p < 0.01 -> "<1%"
+    else -> "${Math.round(p * 100)}%"
+}
+
+private fun shortName(side: AiSide): String = side.name.substringBefore("-Mega")
 
 private const val PREFS = "calc"
 
@@ -129,28 +153,33 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
     val field = remember(variant, snapshot.inBattle, snapshot.isDoubleBattle) { CalcLive.field(variant, snapshot) }
 
     // The trainer's side: the pack's sets (as the battle has them, while fighting), or what a wild battle shows.
-    val foes: List<Pair<CalcMon, Int>> = remember(pack, variant, fighting, wild, snapshot.enemyParty, snapshot.battleOpponent) {
+    val foes: List<FoeMon> = remember(pack, variant, fighting, wild, snapshot.enemyParty, snapshot.battleOpponent) {
+        fun planned(v: CalcVariant) = v.sets.mapNotNull { s -> CalcMon.of(pack, s)?.let { FoeMon(it, pack.speciesId(s.species), s) } }
         when {
             variant != null && fighting -> {
                 val out = snapshot.battleOpponent.firstOrNull()
                 val party = snapshot.enemyParty
-                val used = HashSet<String>()
                 val fromParty = party.mapIndexedNotNull { i, mv ->
                     val set = CalcLive.setFor(pack, variant, mv, i)
                     // The one that's out is read from the battle itself: its stat changes, its Mega's species.
                     val liveMon = if (i == snapshot.focusEnemyActive && out != null) out else mv
-                    val mon = if (set != null) CalcLive.foe(pack, set, liveMon).also { used += set.id } else CalcLive.wild(pack, liveMon)
-                    mon?.let { it to liveMon.species }
+                    val mon = if (set != null) {
+                        val slot = variant.sets.indexOf(set)
+                        CalcLive.foe(pack, set, liveMon, CalcLive.preMegaAbility(pack, variant, set, slot, liveMon))
+                    } else {
+                        CalcLive.wild(pack, liveMon)
+                    }
+                    mon?.let { FoeMon(it, liveMon.species, set, fainted = liveMon.maxHp > 0 && liveMon.hp == 0) }
                 }
-                fromParty.ifEmpty { variant.sets.mapNotNull { s -> CalcMon.of(pack, s)?.let { it to pack.speciesId(s.species) } } }
+                fromParty.ifEmpty { planned(variant) }
             }
-            variant != null -> variant.sets.mapNotNull { s -> CalcMon.of(pack, s)?.let { it to pack.speciesId(s.species) } }
-            wild -> snapshot.battleOpponent.mapNotNull { mv -> CalcLive.wild(pack, mv)?.let { it to mv.species } }
+            variant != null -> planned(variant)
+            wild -> snapshot.battleOpponent.mapNotNull { mv -> CalcLive.wild(pack, mv)?.let { FoeMon(it, mv.species, null) } }
             else -> emptyList()
         }
     }
     val foeIndex = (ui.foe ?: snapshot.focusEnemyActive.takeIf { fighting && it in foes.indices } ?: 0).coerceIn(0, (foes.size - 1).coerceAtLeast(0))
-    val foe = foes.getOrNull(foeIndex)?.first
+    val foe = foes.getOrNull(foeIndex)?.mon
 
     // The player's side: the party, the one that's out as the battle has it.
     val outSlot = snapshot.playerBattlers.firstOrNull { it in snapshot.party.indices } ?: -1
@@ -172,6 +201,35 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
     }
     val matchups: List<CalcMatchup?> = matchupState.value.orEmpty()
     val matchup = matchups.getOrNull(youIndex)
+
+    // The trainer AI's odds for the picked pair (a trainer's singles battle only): a few thousand of its turns thought
+    // through, off the UI thread.
+    val ai = remember(pack) { CfruAi(pack) }
+    val you = yours.getOrNull(youIndex)
+    val youFainted = snapshot.party.getOrNull(youIndex)?.let { it.maxHp > 0 && it.hp == 0 } == true
+    val oddsState = remember(game) { mutableStateOf<CalcOdds?>(null) }
+    LaunchedEffect(you, foes, foeIndex, field, modeId) {
+        oddsState.value = null
+        val picked = foes.getOrNull(foeIndex)
+        if (variant == null || field.doubles || you == null || youFainted || picked == null || picked.set == null || picked.fainted) return@LaunchedEffect
+        oddsState.value = withContext(Dispatchers.Default) {
+            runCatching {
+                val bench = foes.withIndex().filter { (i, f) -> i != foeIndex && !f.fainted && f.set != null }.map { (i, f) ->
+                    val slot = variant.sets.indexOf(f.set).takeIf { it >= 0 } ?: i
+                    CalcAi.Benched(slot, CalcAi.benchForm(f.mon, variant.preMega[slot]))
+                }
+                val alive = snapshot.party.count { !it.isEgg && (it.maxHp == 0 || it.hp > 0) }
+                val battle = CalcAi.battle(
+                    you, picked.mon, variant.sets.indexOf(picked.set).takeIf { it >= 0 } ?: foeIndex, bench, field,
+                    yourMonsLeft = alive.coerceAtLeast(1), kos = foes.count { it.fainted }, teamSize = foes.size,
+                    hardcore = modeId == "hardcore", battleEffect = variant.battleEffect,
+                    mega = if (fighting) CalcAi.pendingMega(picked.mon, picked.set) else null,
+                )
+                CalcOdds(ai.predict(battle), ai.replacement(battle), ai::switchReason)
+            }.getOrNull()
+        }
+    }
+    val odds = oddsState.value?.takeIf { matchup != null }
 
     val shownIndex = fight?.index ?: -1
     fun step(by: Int) {
@@ -208,8 +266,13 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val cell = small.lineHeight * 2.4f
                     Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(u * 3)) {
-                        foes.forEachIndexed { i, (mon, speciesId) ->
-                            CalcSlot(spriteAsset("pokemon", speciesId), mon.name, i == foeIndex, mon.curHP() == 0 && fighting, small, cell) { ui.foe = i }
+                        // Who the trainer sends out if you KO the one picked now (NEXT; with each one's chance if it could be several).
+                        val next = odds?.next.orEmpty()
+                        foes.forEachIndexed { i, f ->
+                            val slot = variant?.sets?.indexOf(f.set)?.takeIf { it >= 0 } ?: i
+                            val chance = next.firstOrNull { it.first.slot == slot }?.second
+                            val badge = chance?.let { if (next.size > 1) "NEXT ${share(it)}" else "NEXT" }
+                            CalcSlot(spriteAsset("pokemon", f.speciesId), f.mon.name, i == foeIndex, f.fainted && fighting, badge, small, cell) { ui.foe = i }
                         }
                     }
                     if (fight != null && variant != null) {
@@ -220,9 +283,17 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
                             else -> null
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            status?.let { GbaText(it, OptionColors.value, OptionColors.valueShadow, small) }
                             val where = listOfNotNull(fight.location.takeIf { it.isNotEmpty() }, if (fight.levelCap > 0) "LEVEL CAP ${fight.levelCap}" else null)
-                            if (where.isNotEmpty()) GbaText(where.joinToString(" · "), OptionColors.muted, OptionColors.mutedShadow, small)
+                            // With a team button under it, the status goes beside the place (a line less over the matchup).
+                            val inline = fight.variants.size > 1 && !fighting
+                            if (!inline) status?.let { GbaText(it, OptionColors.value, OptionColors.valueShadow, small) }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (inline) status?.let {
+                                    GbaText(it, OptionColors.value, OptionColors.valueShadow, small)
+                                    if (where.isNotEmpty()) Spacer(Modifier.width(u * 4))
+                                }
+                                if (where.isNotEmpty()) GbaText(where.joinToString(" · "), OptionColors.muted, OptionColors.mutedShadow, small)
+                            }
                             if (fight.variants.size > 1 && !fighting) {
                                 OptionButton(variant.label.ifEmpty { "TEAM" }.uppercase(), small, onClick = {
                                     ui.variants = ui.variants + (fight.index to (fight.variants.indexOf(variant) + 1) % fight.variants.size)
@@ -255,13 +326,13 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
                     Row(Modifier.fillMaxWidth().weight(1f)) {
                         CalcSide(
                             "YOU", matchup.you, spriteAsset("pokemon", snapshot.party.getOrNull(youIndex)?.species ?: 0),
-                            matchup.yourMoves, matchup.yourSpeed, if (tie) null else youFirst, threat = false, m, small,
+                            matchup.yourMoves, matchup.yourSpeed, if (tie) null else youFirst, threat = false, null, m, small,
                             Modifier.weight(1f).fillMaxHeight(),
                         )
                         Separator(m, Modifier.fillMaxHeight().padding(horizontal = u * 4), vertical = true)
                         CalcSide(
-                            "FOE", matchup.foe, spriteAsset("pokemon", foes[foeIndex].second),
-                            matchup.foeMoves, matchup.foeSpeed, if (tie) null else !youFirst, threat = true, m, small,
+                            "FOE", matchup.foe, spriteAsset("pokemon", foes[foeIndex].speciesId),
+                            matchup.foeMoves, matchup.foeSpeed, if (tie) null else !youFirst, threat = true, odds, m, small,
                             Modifier.weight(1f).fillMaxHeight(),
                         )
                     }
@@ -281,7 +352,7 @@ internal fun CalcScreen(snapshot: SnapshotView, modifier: Modifier = Modifier) {
 
 /** One Pokémon of a team: its icon in a framed cell, the picked one in the value colour. */
 @Composable
-private fun CalcSlot(asset: String?, name: String, picked: Boolean, fainted: Boolean, small: GbaTextMetrics, cell: Dp, onClick: () -> Unit) {
+private fun CalcSlot(asset: String?, name: String, picked: Boolean, fainted: Boolean, badge: String?, small: GbaTextMetrics, cell: Dp, onClick: () -> Unit) {
     val u = small.u
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
@@ -296,9 +367,10 @@ private fun CalcSlot(asset: String?, name: String, picked: Boolean, fainted: Boo
                 drawLayeredBox(frame, OptionColors.titleFill, radius = 3 * px)
             }
             .soundClickable(interactionSource = source, indication = null, onClick = onClick)
-            .semantics { contentDescription = name },
+            .semantics { contentDescription = if (badge != null) "$name, $badge" else name },
     ) {
         SpeciesIcon(asset, size = cell * 0.85f, modifier = Modifier.alpha(if (fainted) 0.35f else 1f))
+        if (badge != null) Box(Modifier.align(Alignment.BottomCenter).wrapContentSize(unbounded = true)) { VerdictPill(badge, KoGrey) }
     }
 }
 
@@ -306,7 +378,7 @@ private fun CalcSlot(asset: String?, name: String, picked: Boolean, fainted: Boo
 @Composable
 private fun CalcSide(
     side: String, mon: CalcMon, asset: String?, lines: List<CalcLine>, speed: Int, first: Boolean?, threat: Boolean,
-    m: GbaTextMetrics, small: GbaTextMetrics, modifier: Modifier,
+    odds: CalcOdds?, m: GbaTextMetrics, small: GbaTextMetrics, modifier: Modifier,
 ) {
     val u = m.u
     Column(modifier.verticalScroll(rememberScrollState())) {
@@ -345,18 +417,45 @@ private fun CalcSide(
         }
         Spacer(Modifier.height(u * 2))
         Separator(m, Modifier.fillMaxWidth().padding(vertical = u * 2))
-        lines.forEach { line -> MoveLine(line, threat, m, small) }
+        val prediction = odds?.prediction
+        if (prediction == null) {
+            lines.forEach { line -> MoveLine(line, threat, null, false, false, m, small) }
+        } else {
+            // The trainer AI's options, its moves and its switches, likeliest first (the tab is short: what it will do shows).
+            val likeliest = (prediction.shares.toList() + prediction.switches.map { it.share }).max()
+            val options = lines.indices.map { i -> prediction.shares.getOrElse(i) { 0.0 } to i } +
+                prediction.switches.indices.map { j -> prediction.switches[j].share to (lines.size + j) }
+            options.sortedByDescending { it.first }.forEach { (chance, k) ->
+                if (k < lines.size) {
+                    MoveLine(lines[k], threat, chance, (prediction.zShares.getOrNull(k) ?: 0.0) > 0, chance > 0 && chance == likeliest, m, small)
+                } else {
+                    val sw = prediction.switches[k - lines.size]
+                    val why = sw.reasons.keys.sorted().mapNotNull { odds.reason(it) }.joinToString(", or ")
+                    SwitchLine(shortName(sw.mon), sw.share, why, sw.share == likeliest, small)
+                }
+            }
+        }
         if (lines.isEmpty()) GbaText("MOVES NOT KNOWN", OptionColors.muted, OptionColors.mutedShadow, small)
     }
 }
 
 /** A move on one row: its type's colour down the left, its name, the share of the target's HP it takes, the hits to a knockout. */
 @Composable
-private fun MoveLine(line: CalcLine, threat: Boolean, m: GbaTextMetrics, small: GbaTextMetrics) {
+private fun MoveLine(
+    line: CalcLine, threat: Boolean, chance: Double?, asZ: Boolean, likeliest: Boolean, m: GbaTextMetrics, small: GbaTextMetrics,
+) {
     val u = m.u
     Row(Modifier.fillMaxWidth().padding(vertical = u * 1), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.width(u * 3).height(small.lineHeight).background(AppColors.typeColors[line.type] ?: AppColors.muted))
         Spacer(Modifier.width(u * 3))
+        // The chance the trainer's AI uses it this turn (Z: some of it as its Z-Move); its likeliest pick in blue.
+        if (chance != null) {
+            Box(Modifier.width(small.lineHeight * 2.2f), contentAlignment = Alignment.CenterStart) {
+                val text = if (chance <= 0) "-" else share(chance) + if (asZ) "Z" else ""
+                if (likeliest) GbaText(text, AiBlue, Color(0x33000000), small)
+                else GbaText(text, OptionColors.muted, OptionColors.mutedShadow, small)
+            }
+        }
         GbaText(line.move, OptionColors.label, OptionColors.labelShadow, small, Modifier.weight(1f))
         if (line.priority > 0) {
             VerdictPill("+${line.priority}", KoGrey)
@@ -378,6 +477,23 @@ private fun MoveLine(line: CalcLine, threat: Boolean, m: GbaTextMetrics, small: 
                 })
             }
         }
+    }
+}
+
+/** A switch the trainer's AI may make, as one more of its options under its moves: its chance, to whom, and why. */
+@Composable
+private fun SwitchLine(name: String, chance: Double, why: String, likeliest: Boolean, small: GbaTextMetrics) {
+    val u = small.u
+    Row(Modifier.fillMaxWidth().padding(vertical = u * 1), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(u * 3).height(small.lineHeight).background(KoGrey))
+        Spacer(Modifier.width(u * 3))
+        Box(Modifier.width(small.lineHeight * 2.2f), contentAlignment = Alignment.CenterStart) {
+            if (likeliest) GbaText(share(chance), AiBlue, Color(0x33000000), small)
+            else GbaText(share(chance), OptionColors.muted, OptionColors.mutedShadow, small)
+        }
+        GbaText("Switch: $name", OptionColors.label, OptionColors.labelShadow, small)
+        Spacer(Modifier.width(u * 3))
+        GbaText(why, OptionColors.muted, OptionColors.mutedShadow, small, Modifier.weight(1f))
     }
 }
 

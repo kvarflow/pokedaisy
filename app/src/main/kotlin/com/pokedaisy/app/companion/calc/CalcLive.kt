@@ -120,7 +120,7 @@ object CalcLive {
      * A trainer's Pokémon from the pack, as [live] (the battle's foe, or the trainer's party entry) has it now:
      * its HP, status and stat changes on the set's own spread, ability, item and moves.
      */
-    fun foe(pack: CalcPack, set: CalcSet, live: MonView? = null): CalcMon? {
+    fun foe(pack: CalcPack, set: CalcSet, live: MonView? = null, ability: String? = null): CalcMon? {
         val species = live?.let { pack.speciesName(it.species) }?.let { pack.species[it] } ?: pack.species[set.species] ?: return null
         val base = CalcMon.of(pack, set) ?: return null
         val override = battleStats(live)
@@ -134,8 +134,8 @@ object CalcLive {
         val item = if (live?.heldItem != null) pack.itemName(live.heldItemId).orEmpty() else set.item
         return CalcMon(
             pack, species, level = live?.level?.takeIf { it > 0 } ?: set.level, gender = live?.let(::gender),
-            ability = set.ability, item = item, nature = set.nature, ivs = set.ivs.copyOf(), evs = set.evs.copyOf(),
-            boosts = boosts(live), curHP = hp, status = live?.let { status(it.status) }.orEmpty(), moves = set.moves,
+            ability = ability ?: set.ability, abilityOn = ability != null, item = item, nature = set.nature, ivs = set.ivs.copyOf(),
+            evs = set.evs.copyOf(), boosts = boosts(live), curHP = hp, status = live?.let { status(it.status) }.orEmpty(), moves = set.moves,
             statsOverride = override,
         )
     }
@@ -153,6 +153,17 @@ object CalcLive {
             curHP = live.hp, status = status(live.status), moves = moves(pack, live, st?.ivs),
             statsOverride = battleStats(live),
         )
+    }
+
+    /**
+     * The ability [live] has while it is still the base form of [set]'s Mega (slot [slot] of [variant]): the one the
+     * game gives it before it evolves. Null = it isn't (it has the set's own).
+     */
+    fun preMegaAbility(pack: CalcPack, variant: CalcVariant, set: CalcSet, slot: Int, live: MonView?): String? {
+        if ("-Mega" !in set.species || live == null) return null
+        val name = pack.speciesName(live.species) ?: return null
+        if (name == set.species || "-Mega" in name) return null
+        return variant.preMega[slot] ?: pack.species[name]?.ability
     }
 
     /** The set of [variant] that [live] is: its species, or the species it Mega Evolved from. */

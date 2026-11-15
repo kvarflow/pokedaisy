@@ -71,7 +71,7 @@ for (const m of gen.moves) {
     : typeof m.multihit === 'number' ? [m.multihit, m.multihit] : m.multihit;
   row('M', m.name, m.basePower || 0, m.type, m.category || 'Status', m.priority || 0,
     m.target || '', list(Object.keys(m.flags || {})), flag(m.secondaries), flag(m.recoil),
-    flag(m.drain), mh[0], mh[1], flag(m.multiaccuracy),
+    m.drain ? m.drain.join('/') : 0, mh[0], mh[1], flag(m.multiaccuracy),
     Math.max(0, -(self.atk || 0)), Math.max(0, -(self.spa || 0)),
     flag(m.willCrit), flag(m.ignoreDefensive), m.overrideDefensiveStat || '',
     flag(m.breaksProtect), flag(m.isZ), (m.zMove && m.zMove.basePower) || 0,
@@ -87,6 +87,12 @@ for (const i of gen.items) {
     (gift && gift.t) || '', (gift && gift.p) || 0, items.getTechnoBlast(i.name) || '',
     items.getMultiAttack(i.name) || '', items.SEED_BOOSTED_STAT[i.name] || '');
 }
+
+// The trainer AI's view of each move, from the ROM's move table (the site's data/trainer_ai.js): by the
+// move's name in lowercase letters and digits, [effect, accuracy, secondary chance, target, priority,
+// flags, split, power].
+const aiMoves = load('src/js/data/trainer_ai.js', 'TRAINER_AI_MOVES');
+for (const key of Object.keys(aiMoves)) row('AM', key, ...aiMoves[key]);
 
 // The ROM's ids. A name the calculator has no data for is kept: the reader shows it and skips it.
 ids.species.forEach((name, id) => { if (name) row('XS', id, name); });
@@ -122,7 +128,9 @@ for (const mode of ['normal', 'hardcore']) {
     row('F', f.name, f.location || '', f.levelCap || 0, flag(f.optional), flag(f.route),
       ai === undefined ? (f.optional ? 1 : 7) : ai);
     for (const v of f.variants) {
-      row('V', v.label || '', v.battleEffect || '', (v.trainerIds || []).join(','), list(v.sets));
+      // preMega: the ability a Mega's base form has before it evolves, by the team slot.
+      const preMega = Object.keys(v.preMega || {}).map(k => `${k}:${v.preMega[k]}`);
+      row('V', v.label || '', v.battleEffect || '', (v.trainerIds || []).join(','), list(v.sets), list(preMega));
     }
   }
 }

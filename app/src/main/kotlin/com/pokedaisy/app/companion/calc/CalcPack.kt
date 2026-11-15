@@ -57,6 +57,8 @@ class CalcMoveData(
     /** The power its Z-Move has; 0 = none. */
     val zBasePower: Int,
     val hasCrashDamage: Boolean,
+    /** The share of the damage it drains, as [numerator, denominator] (null = none). */
+    val drainRatio: IntArray? = null,
 )
 
 class CalcItem(
@@ -74,6 +76,12 @@ class CalcItem(
 )
 
 class CalcNature(val name: String, val plus: Int, val minus: Int)
+
+/** The trainer AI's data for a move, from the ROM's move table: CFRU's effect id, accuracy (0 = never misses), secondary
+ * chance, target bits, priority, flags, split (0 physical, 1 special, 2 status) and power. */
+class AiMoveData(
+    val effect: Int, val accuracy: Int, val chance: Int, val target: Int, val priority: Int, val flags: Int, val split: Int, val power: Int,
+)
 
 /** A trainer Pokémon as the game builds it. */
 class CalcSet(
@@ -98,6 +106,8 @@ class CalcVariant(
     /** The ROM's trainer ids that are this team. */
     val trainerIds: List<Int>,
     val sets: List<CalcSet>,
+    /** The ability a Mega's base form has before it evolves, by team slot (else its species' first). */
+    val preMega: Map<Int, String> = emptyMap(),
 )
 
 /** A trainer in the order the game brings them. */
@@ -148,7 +158,15 @@ class CalcPack(
     private val itemIds: Map<Int, String>,
     private val abilitySlots: Map<Int, List<String>>,
     val modes: Map<String, CalcMode>,
+    private val aiMoves: Map<String, AiMoveData> = emptyMap(),
 ) {
+    /** The AI's data for the move [name] (Hidden Power of any type is Hidden Power's); null = not in the ROM's table. */
+    fun aiMove(name: String): AiMoveData? =
+        aiMoves[(if (name.startsWith("Hidden Power")) "Hidden Power" else name).lowercase().filter { it in 'a'..'z' || it in '0'..'9' }]
+
+    /** Whether [item] is a Mega Stone. */
+    fun isMegaStone(item: String): Boolean = items[item]?.megaEvolves?.isNotEmpty() == true
+
     private val typeIndex: Map<String, Int> = typeNames.withIndex().associate { it.value to it.index }
 
     /** How a move of type [attacking] hits the type [defending]: 0, 0.5, 1 or 2. */
@@ -205,6 +223,7 @@ class CalcPack(
             val itemIds = HashMap<Int, String>()
             val abilitySlots = HashMap<Int, List<String>>()
             val modes = LinkedHashMap<String, CalcMode>()
+            val aiMoves = HashMap<String, AiMoveData>()
 
             var modeId: String? = null
             var sets = HashMap<String, CalcSet>()
@@ -247,7 +266,8 @@ class CalcPack(
                         flags = items(c[7]).toHashSet(),
                         secondaries = c[8] == "1",
                         recoil = c[9] == "1",
-                        drain = c[10] == "1",
+                        drain = c[10] != "0",
+                        drainRatio = c[10].split('/').takeIf { it.size == 2 }?.map { it.toInt() }?.toIntArray(),
                         multihitMin = c[11].toInt(),
                         multihitMax = c[12].toInt(),
                         multiaccuracy = c[13] == "1",
@@ -275,6 +295,9 @@ class CalcPack(
                     "XM" -> moveIds[c[1].toInt()] = c[2]
                     "XI" -> itemIds[c[1].toInt()] = c[2]
                     "XA" -> abilitySlots[c[1].toInt()] = items(c[2])
+                    "AM" -> aiMoves[c[1]] = AiMoveData(
+                        c[2].toInt(), c[3].toInt(), c[4].toInt(), c[5].toInt(), c[6].toInt(), c[7].toInt(), c[8].toInt(), c[9].toInt(),
+                    )
                     "@mode" -> {
                         endMode()
                         modeId = c[1]
@@ -300,6 +323,7 @@ class CalcPack(
                             battleEffect = c[2],
                             trainerIds = c[3].split(',').mapNotNull { it.toIntOrNull() },
                             sets = items(c[4]).mapNotNull { sets[it] },
+                            preMega = items(c.getOrElse(5) { "" }).associate { it.substringBefore(':').toInt() to it.substringAfter(':') },
                         ),
                     )
                 }
@@ -307,7 +331,7 @@ class CalcPack(
             endMode()
             return CalcPack(
                 game, gen, typeNames, chart.toTypedArray(), natures, species, moves, items,
-                speciesIds, moveIds, itemIds, abilitySlots, modes,
+                speciesIds, moveIds, itemIds, abilitySlots, modes, aiMoves,
             )
         }
     }

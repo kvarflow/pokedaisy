@@ -139,8 +139,12 @@ The app shows every license below in full under Settings > LICENSES.
   its Gen 7-9 mechanics, and app/src/main/assets/calc/radical_red.pack.gz is
   that fork's tables for Radical Red 4.1 (stats, moves, items, the type chart,
   trainer teams in the order they are met), written by
-  scripts/gen_calc_pack.js. The tests' cases
-  (app/src/test/resources/calc/vectors.tsv.gz) are that calculator's results.
+  scripts/gen_calc_pack.js. The CALC tab's trainer AI (CfruAi.kt) is a Kotlin
+  port of that fork's src/js/trainer_ai.js, its reading of Complete Fire Red
+  Upgrade's battle AI as Radical Red has it, with the ROM's move data for it in
+  the same pack. The tests' cases (app/src/test/resources/calc/vectors.tsv.gz,
+  ai_vectors.jsonl.gz, by scripts/gen_ai_vectors.js) are that calculator's and
+  that AI's results.
 - Some decoders and layouts follow the community decompilations of the games
   (pret's pokered / pokeyellow / pokegold / pokecrystal / pokefirered /
   pokeemerald / pokeruby / pokeplatinum / pokeheartgold, pokeemerald-expansion,

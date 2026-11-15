@@ -3,7 +3,7 @@ title: Fight planner
 summary: The CALC tab works out the damage both sides deal in Radical Red, for the fight you're up to or the one you're in, from your game as it is right now.
 section: companion
 order: 11
-keywords: [calc, calculator, damage, damage calculator, fight planner, planner, ohko, 2hko, ko, knock out, rolls, speed, outspeed, level cap, trainer, boss, gym leader, rival, hardcore, normal, nuzlocke, radical red]
+keywords: [calc, calculator, damage, damage calculator, fight planner, planner, ohko, 2hko, ko, knock out, rolls, speed, outspeed, level cap, trainer, boss, gym leader, rival, hardcore, normal, nuzlocke, radical red, ai, trainer ai, odds, chance, predict, prediction, switch, switch in, next in, z-move, mega]
 ---
 
 The `CALC` tab answers the question you'd otherwise open a damage calculator for: can my Pokémon take this fight? It knows every trainer's team in the order you meet them, reads your party straight from the game, and works out what each move does to the other side.
@@ -31,6 +31,16 @@ The middle shows the two side by side. Each side has the Pokémon's types, HP, a
 - `+1` beside a move that goes first.
 
 Status moves say `STATUS`, and a move that can't touch the target says `NO EFFECT`.
+
+## What the trainer will do
+
+Radical Red's trainers don't pick moves at random: each one scores its options the way the game's battle AI does, and the tab works that out too. On the foe's side, the number left of each move is the chance the trainer uses it this turn. The likeliest is in blue, and a move it never picks shows `-`. A trainer may switch out instead: each switch is a row of its own, `Switch:` and the Pokémon it brings in, with the reason, like `to avoid being knocked out`. The foe's options are listed likeliest first, so what it will do is always at the top.
+
+On the trainer's team, `NEXT` marks the Pokémon it sends out if you knock out the one you picked this turn, with each one's chance when it could be more than one.
+
+In `HARDCORE`, a move with a `Z` after its chance is one the trainer may turn into its Z-Move. A trainer's Pokémon that will Mega Evolve is counted as the AI sees it: it decides as the Mega, but moves as its base form on the turn it changes.
+
+The chances count every way the AI's own dice can fall (its guess at your move, a lucky critical hit, ties between moves), so they're exact for what the tab knows. The tab can't see everything the game tracks during a battle, like which moves have already been used, so treat the numbers as a strong guide. They show for a trainer's single battle only, not a double battle or a wild one.
 
 ## Where the numbers come from
 

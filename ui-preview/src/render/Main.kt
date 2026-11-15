@@ -1829,7 +1829,8 @@ fun main(args: Array<String>) {
         *(if (game == GameKind.RADICAL_RED) arrayOf(
             Shot("$g-calc", bw, bh, bd, companion("CALC") { snapshot().copy(game = GameKind.RADICAL_RED) }),
             Shot("$g-calc-next", bw, bh, bd, companion("CALC") { snapshot().copy(game = GameKind.RADICAL_RED) }) {
-                repeat(5) { onNodeWithText("NEXT").performClick(); mainClock.advanceTimeByFrame() }
+                // (The title's NEXT, not a team's NEXT badge.)
+                repeat(5) { onAllNodesWithText("NEXT").onFirst().performClick(); mainClock.advanceTimeByFrame() }
                 repeat(3) { mainClock.advanceTimeByFrame() }
             },
             Shot("$g-calc-battle", bw, bh, bd, companion("CALC") {

@@ -209,7 +209,7 @@ val licensesAsset by tasks.registering {
         "Apache Commons - NOTICE" to "third_party/licenses/Apache-Commons-NOTICE.txt",
         "XZ for Java - BSD Zero Clause" to "third_party/licenses/XZ-Java-0BSD.txt",
         "Bouncy Castle (co-op) - MIT" to "third_party/licenses/BouncyCastle-MIT.txt",
-        "Pokemon Showdown damage calculator (the CALC tab's engine) - MIT" to "third_party/licenses/damage-calc-MIT.txt",
+        "Pokemon Showdown damage calculator, via kvarflow/rr-calc (the CALC tab's engine and trainer AI) - MIT" to "third_party/licenses/damage-calc-MIT.txt",
     ).map { (name, path) -> name to rootProject.file(path) }
     inputs.files(parts.map { it.second })
     val out = layout.buildDirectory.file("generated/licenses/licenses.txt")

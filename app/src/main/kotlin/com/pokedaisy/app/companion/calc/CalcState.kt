@@ -200,7 +200,7 @@ class CalcMove(
         private fun CalcMoveData.copyNamed(n: String) = CalcMoveData(
             n, basePower, type, category, priority, target, flags, secondaries, recoil, drain, multihitMin, multihitMax,
             multiaccuracy, selfAtkDrop, selfSpaDrop, willCrit, ignoreDefensive, overrideDefensiveStat, breaksProtect,
-            isZ, zBasePower, hasCrashDamage,
+            isZ, zBasePower, hasCrashDamage, drainRatio,
         )
 
         private val Z_BY_TYPE = mapOf(
