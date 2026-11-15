@@ -255,6 +255,8 @@ val LEGACY_NATIVE_RADICAL_RED_V4_1 = LEGACY_NATIVE_FIRERED_REV0.copy(
     // FireRed's battle menu cursors (CFRU's EWRAM), checked headless like Unbound's (radical_red_battle's README).
     actionCursor = 0x02023FF8L,
     moveCursor = 0x02023FFCL,
+    // gTrainerBattleOpponent_A: the trainer being fought (the CALC tab's fight).
+    trainerBattleOpponent = 0x020386AEL,
 )
 
 // Pokemon Odyssey (English) v4.1.1 - a 32 MB BPRE hack like the others above.
