@@ -241,6 +241,8 @@ data class SnapshotView(
     val enemyActive: Int = -1,
     /** [Telemetry.isTrainerBattle]: in a battle, whether it's a trainer's (null = not read). */
     val isTrainerBattle: Boolean? = null,
+    /** [Telemetry.trainerId]: the trainer being fought; 0 = none or not read. */
+    val trainerId: Int = 0,
     // The fields below are only used by BATTLE FOCUS.
     /** [enemyParty] index of each [battleOpponent]; -1 = unknown. */
     val enemyBattlers: List<Int> = emptyList(),
@@ -478,6 +480,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             return mon.copy(
                 abilityId = b.ability,
                 heldItem = if (b.stats == null) null else if (b.item == 0) "" else itemName(b.item),
+                heldItemId = b.item,
                 battleStats = b.stats?.toList(),
                 statStages = b.statStages?.map { it - 6 },
                 weaknesses = matchups.weaknesses,
@@ -499,6 +502,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
                 moves = moveViews(b.moves, b.pp),
                 abilityId = b.ability,
                 heldItem = if (b.stats == null) null else if (b.item == 0) "" else itemName(b.item),
+                heldItemId = b.item,
                 battleStats = b.stats?.toList(),
                 statStages = b.statStages?.map { it - 6 },
                 weaknesses = matchups.weaknesses,
@@ -584,6 +588,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
         },
         enemyActive = t.enemyActive,
         isTrainerBattle = t.isTrainerBattle,
+        trainerId = t.trainerId,
         enemyBattlers = enemyBattlers,
         playerBattlers = playerBattlers,
         focusPlayer = focusPlayer,

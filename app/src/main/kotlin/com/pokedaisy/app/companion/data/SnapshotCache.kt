@@ -18,7 +18,7 @@ import java.io.File
 object SnapshotCache {
     private const val MAGIC = 0x50445343   // "PDSC"
     // 2: move ids (the move advice reads them). 4: the names' game code and language, nicknames.
-    private const val VERSION = 4
+    private const val VERSION = 5
     private const val MAX_BYTES = 256 * 1024
 
     fun fileFor(state: File) = File(state.path + ".companion")
@@ -155,7 +155,7 @@ object SnapshotCache {
         m.exp?.let { writeLong(it.total); writeLong(it.levelStart); writeLong(it.nextLevel) }
         writeLong(m.personality)
         writeBoolean(m.stats != null)
-        m.stats?.let { ints(it.ivs); ints(it.evs); writeInt(it.nature); ints(it.stats) }
+        m.stats?.let { ints(it.ivs); ints(it.evs); writeInt(it.nature); ints(it.stats); writeBoolean(it.hiddenAbility) }
         writeInt(m.heldItemId)
         nullableUTF(m.nickname)
     }
@@ -170,7 +170,7 @@ object SnapshotCache {
         val weak = matchups(); val resist = matchups(); val immune = matchups()
         val exp = if (readBoolean()) ExpProgress(readLong(), readLong(), readLong()) else null
         val personality = readLong()
-        val stats = if (readBoolean()) MonStats(ints(), ints(), readInt(), ints()) else null
+        val stats = if (readBoolean()) MonStats(ints(), ints(), readInt(), ints(), hiddenAbility = readBoolean()) else null
         val held = readInt()
         val nickname = nullableUTF()
         return MonView(

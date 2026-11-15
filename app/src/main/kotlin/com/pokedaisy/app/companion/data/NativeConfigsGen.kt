@@ -4310,6 +4310,8 @@ val NATIVE_RADICAL_RED_V4_1 = NATIVE_FIRERED_REV0.copy(
     // FireRed's battle menu cursors (CFRU's EWRAM), checked headless like Unbound's (radical_red_battle's README).
     actionCursor = 0x02023FF8L,
     moveCursor = 0x02023FFCL,
+    // FireRed rev 0's own (the CALC tab's fight lookup).
+    trainerBattleOpponent = 0x020386AEL,
 )
 
 // ---- gamedata/gen3/hacks/recharged_emerald.toml ----

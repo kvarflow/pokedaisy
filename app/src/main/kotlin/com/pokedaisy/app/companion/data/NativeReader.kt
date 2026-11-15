@@ -103,6 +103,8 @@ data class NativeConfig(
     // SaveBlock1 offset of `money` (XOR SaveBlock2.encryptionKey, like bag
     // quantities); -1 = not known for this game, so no money is shown.
     val moneyOff: Long = -1,
+    /** gTrainerBattleOpponent_A, a u16: the trainer being fought (the CALC tab's fight lookup); 0 = not known. */
+    val trainerBattleOpponent: Long = 0,
     // struct BattlePokemon's size and field offsets (see BattleMonLayout).
     val battleMonLayout: BattleMonLayout = VANILLA_BATTLE_MON,
     // struct Pokemon's party fields and flags byte (see PartyMonLayout).
@@ -563,6 +565,9 @@ fun readNativeTelemetry(client: MemoryReader, cfg: NativeConfig): Telemetry {
         enemyParty = enemyParty,
         battleFoes = battleFoes,
         isTrainerBattle = if (inBattle && trainerRead) isTrainer else null,
+        trainerId = if (inBattle && isTrainer && cfg.trainerBattleOpponent != 0L) {
+            runCatching { u16le(client.readCoreMemory(cfg.trainerBattleOpponent, 2), 0) }.getOrDefault(0)
+        } else 0,
         enemyActive = enemyActive,
         enemyNext = enemyNext,
         battlerPartySlots = battlerPartySlots,

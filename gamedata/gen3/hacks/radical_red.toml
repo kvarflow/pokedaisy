@@ -41,3 +41,5 @@ guideTables = 'GUIDE_TABLES_RADICAL_RED'
 # FireRed's battle menu cursors (CFRU's EWRAM), checked headless like Unbound's (radical_red_battle's README).
 actionCursor = 0x02023FF8
 moveCursor = 0x02023FFC
+# FireRed rev 0's own (the CALC tab's fight lookup).
+trainerBattleOpponent = 0x020386AE

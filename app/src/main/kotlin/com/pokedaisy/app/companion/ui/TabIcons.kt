@@ -207,6 +207,32 @@ internal object TabIcons {
         mapOf('k' to OUTLINE, 'y' to Color(0xFFF8C830), 'h' to Color(0xFFFFF0A0), 'o' to Color(0xFFD89820), 'd' to Color(0xFF905830)),
     )
 
+    /** A pocket calculator: the CALC tab. */
+    val calc = TabIcon(
+        listOf(
+            "................",
+            "...kkkkkkkkkk...",
+            "...kssssssssk...",
+            "...kswwwwwwsk...",
+            "...kswggggwsk...",
+            "...kswwwwwwsk...",
+            "...kssssssssk...",
+            "...kswkswkrrk...",
+            "...kssssssssk...",
+            "...kswkswkrrk...",
+            "...kssssssssk...",
+            "...kswkswkbbk...",
+            "...kssssssssk...",
+            "...kswkswkbbk...",
+            "...kkkkkkkkkk...",
+            "................",
+        ),
+        mapOf(
+            'k' to OUTLINE, 'w' to Color(0xFFF0F0F8), 's' to Color(0xFF9898A8), 'g' to Color(0xFF78C058),
+            'r' to Color(0xFFE83838), 'b' to Color(0xFF3878E8),
+        ),
+    )
+
     /** A grey gravestone with a cross on grass: the NUZLOCKE tab (and a fainted Pokémon's mark). */
     val grave = TabIcon(
         listOf(
@@ -268,6 +294,7 @@ internal object TabIcons {
         "BOXES" -> boxes
         "GUIDE" -> guide
         "NUZLOCKE" -> grave
+        "CALC" -> calc
         "CARD" -> card
         "STATES" -> states
         "ACHIEVEMENTS" -> achievements

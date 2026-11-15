@@ -166,7 +166,11 @@ fun CompanionSettingsScreen(
                         if (id !in availableTabs) return@map SettingRow(companionTabLabel(id), tk("N/A")) {}
                         SettingRow(
                             companionTabLabel(id), if (shown) tk("SHOWN") else tk("HIDDEN"),
-                            labelBadge = if (id == "BOXES") NewFeatures.badge(NewFeatures.BOXES_TAB) else null,
+                            labelBadge = when (id) {
+                                "BOXES" -> NewFeatures.badge(NewFeatures.BOXES_TAB)
+                                "CALC" -> NewFeatures.badge(NewFeatures.CALC_TAB)
+                                else -> null
+                            },
                         ) {
                             val now = settings.companionTabs
                             when {
@@ -871,7 +875,7 @@ private fun homeRows(
             tk("BATTLE FOCUS"), onOff(s.battleFocus), subtitle = "Battle info on one page, no scrolling",
             labelBadge = NewFeatures.badge(NewFeatures.BATTLE_FOCUS),
         ) { s.setBattleFocus(!s.battleFocus); changed() },
-        SettingRow(tk("TAB BAR"), tr("{0} TABS", barTabs), labelBadge = NewFeatures.badge(NewFeatures.MORE_TAB) ?: NewFeatures.badge(NewFeatures.BOXES_TAB), opensPage = true, subtitle = "Which tabs sit next to the gear") { navigate(Page.TABS) },
+        SettingRow(tk("TAB BAR"), tr("{0} TABS", barTabs), labelBadge = NewFeatures.badge(NewFeatures.MORE_TAB) ?: NewFeatures.badge(NewFeatures.BOXES_TAB) ?: NewFeatures.badge(NewFeatures.CALC_TAB), opensPage = true, subtitle = "Which tabs sit next to the gear") { navigate(Page.TABS) },
         // The game's menu click on every companion button.
         SettingRow(tk("CLICK SOUND"), onOff(s.clickSound)) { s.setClickSound(!s.clickSound); changed() },
         // RetroAchievements' challenge badges and leaderboard values in the corner (GitHub discussion #620).

@@ -259,6 +259,13 @@ kotlin = 'Long'
 type = 'long'
 default = -1
 
+# gTrainerBattleOpponent_A (u16): the trainer being fought, which the CALC tab looks its
+# fight up by; 0 = not known for this game.
+[field.trainerBattleOpponent]
+kotlin = 'Long'
+type = 'long'
+default = 0
+
 # struct BattlePokemon's size and field offsets (see BattleMonLayout).
 [field.battleMonLayout]
 kotlin = 'BattleMonLayout'
