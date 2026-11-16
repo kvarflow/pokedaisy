@@ -22,7 +22,8 @@ make release               # tags v1.2.0 on main and pushes the tag
 ```
 
 Can't push a tag from where you are? **Actions → Tag a release → Run workflow** (on `main`) tags `main`'s head
-`v<versionName>` and starts the Release workflow on that tag, the same run as a pushed tag.
+`v<versionName>` and starts the Release workflow on that tag, the same run as a pushed tag. Its draft can then be
+published from there too: **Actions → Publish a release → Run workflow** with the tag (and new notes, if any).
 
 Then follow the **Release** run in the repo's Actions tab. Its last job waits for you:
 **Review deployments → release → Approve**. When it's green the release is on GitHub as a
