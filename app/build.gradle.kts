@@ -67,13 +67,15 @@ android {
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "com.pokedaisy.app"
+        // PokeDaisy 2.0: kvarflow's fork, its own app beside the official PokeDaisy (com.pokedaisy.app), with its own
+        // signing key and releases (AppUpdater.REPO). The code's namespace stays com.pokedaisy.app.
+        applicationId = "com.kvarflow.pokedaisy"
         minSdk = 26
         targetSdk = 34
         // Bump both for every GitHub release: the updater compares versionName
         // against the release tag (v<versionName>), Android needs versionCode to grow.
-        versionCode = 21
-        versionName = "1.5.1"
+        versionCode = 22
+        versionName = "2.0.0"
         // Whether this build can send crash reports at all (CrashReports.available).
         buildConfigField("boolean", "CRASHLYTICS", crashlytics.toString())
         buildConfigField("String", "SCREENSCRAPER_DEV_ID", "\"${buildSecret("screenscraper.devId", "SCREENSCRAPER_DEV_ID")}\"")

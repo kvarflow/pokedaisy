@@ -38,10 +38,25 @@ object WhatsNew {
     /** Newest first. */
     val RELEASES: List<Notes> by lazy {
         listOf(
+            NOTES_2_0_0,
             NOTES_1_5_1,
             hotfix("1.5.0.1", NOTES_1_5_0, "1.5.0.1 HOTFIX: turning a Samsung Galaxy sideways no longer closes the game."),
         ) + OLDER
     }
+
+    private val NOTES_2_0_0 = Notes(
+        "2.0.0",
+        listOf(
+            Section(
+                NEW,
+                listOf(
+                    "PokeDaisy 2.0: its own app beside PokeDaisy, updating from its own releases.",
+                    "CALC: a fight planner for Radical Red. Every trainer in the order you meet them, and the damage both ways from your game as it is now.",
+                    "TRAINER AI: the chance the trainer uses each move, when it switches out, and who it sends in next.",
+                ),
+            ),
+        ),
+    )
 
     private val NOTES_1_5_1 = Notes(
         "1.5.1",
