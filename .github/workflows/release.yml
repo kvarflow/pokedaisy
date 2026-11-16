@@ -11,6 +11,9 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Started on a v* tag by the "Tag a release" workflow (tag-release.yml): a tag it pushes with GITHUB_TOKEN can't start
+  # this by itself. The run is the same as for a pushed tag.
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
