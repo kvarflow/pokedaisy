@@ -1,0 +1,44 @@
+# Publishes a draft release from GitHub itself (Actions > Publish a release > Run workflow, on main), with new notes
+# if given: the last step of a release for when you're away from the Releases page. The draft is the one the Release
+# workflow put up for the tag; anything but a draft is refused, so a published release is never changed.
+name: Publish a release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag (v2.0.0)
+        required: true
+        type: string
+      notes:
+        description: Its notes in Markdown, replacing the draft's; empty keeps them
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish the draft
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          [[ "${TAG}" =~ ^v[0-9][0-9A-Za-z.+-]*$ ]] || { echo "::error::not a release tag: ${TAG}"; exit 1; }
+          draft="$(gh release view "${TAG}" --json isDraft --jq .isDraft)" || { echo "::error::no release for ${TAG}"; exit 1; }
+          [ "${draft}" = "true" ] || { echo "::error::${TAG} is already published"; exit 1; }
+          if [ -n "${NOTES}" ]; then
+            printf '%s\n' "${NOTES}" > "${RUNNER_TEMP}/notes.md"
+            gh release edit "${TAG}" --notes-file "${RUNNER_TEMP}/notes.md" --draft=false
+          else
+            gh release edit "${TAG}" --draft=false
+          fi
+          gh release view "${TAG}" --json url --jq '"Published: " + .url' >> "${GITHUB_STEP_SUMMARY}"
