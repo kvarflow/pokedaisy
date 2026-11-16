@@ -13,7 +13,8 @@ import java.net.URL
  */
 object AppUpdater {
 
-    const val REPO = "lidor30/pokedaisy"
+    // PokeDaisy 2.0 updates from its own releases (the fork), not the official app's: those are another app.
+    const val REPO = "kvarflow/pokedaisy"
     const val RELEASES_PAGE = "https://github.com/$REPO/releases"
 
     class Release(

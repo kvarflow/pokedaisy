@@ -2301,7 +2301,8 @@ class SettingsActivity : ComponentActivity() {
     companion object {
         private val FOLDER_PAGES = setOf(Screen.ROMS_FOLDERS, Screen.SAVES_FOLDER, Screen.SAVE_SEARCH, Screen.STATES_FOLDER, Screen.BACKUPS)
         val RATES = floatArrayOf(0f, 1.5f, 2f, 3f, 4f, 5f, 6f, 8f, 10f)
-        const val REPO_URL = "https://github.com/lidor30/pokedaisy"
+        // This build's own source (PokeDaisy 2.0, the fork); the original is credited beside it.
+        const val REPO_URL = "https://github.com/kvarflow/pokedaisy"
         /** A ROM path: open straight on that game's CHEATS (its library menu). */
         const val EXTRA_CHEATS_ROM = "cheats_rom"
         /** Opens one page alone ([SCREEN_HELP]: the manual); BACK finishes. */
