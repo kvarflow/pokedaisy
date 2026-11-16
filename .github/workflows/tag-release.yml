@@ -1,0 +1,39 @@
+# Starts a release from GitHub itself, for when a tag can't be pushed from where you are: Actions > Tag a release >
+# Run workflow (on main). It tags main's head v<versionName> (the version `make bump` set) and starts the Release
+# workflow on that tag, which then runs exactly as for a pushed tag (the `release` environment's v* rule included).
+# A tag pushed with GITHUB_TOKEN starts no workflow by itself, so Release is started by name: workflow_dispatch is the
+# event GITHUB_TOKEN may start.
+name: Tag a release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag:
+    name: Tag v<versionName> and start Release
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+      - name: Tag and start Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)"
+          test -n "${version}" || { echo "::error::no versionName in app/build.gradle.kts"; exit 1; }
+          tag="v${version}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+            echo "::error::${tag} is already tagged: bump the version first (make bump V=...)"; exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${tag}" -m "PokeDaisy ${version}" "${GITHUB_SHA}"
+          git push origin "${tag}"
+          gh workflow run release.yml --ref "${tag}"
+          echo "Tagged ${GITHUB_SHA} ${tag} and started the Release workflow on it." >> "${GITHUB_STEP_SUMMARY}"
